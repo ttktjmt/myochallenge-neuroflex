@@ -1,0 +1,10 @@
+version: '3'
+services:
+  neuroflex_agent:
+    image: neuroflex_agent
+    hostname: agent
+    env_file:
+      - docker/agent/docker.env
+    build:
+      context: ./docker/agent
+      dockerfile: Dockerfile_neuroflex
