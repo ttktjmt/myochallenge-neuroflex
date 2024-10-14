@@ -13,6 +13,14 @@ from envs.helpers import create_vec_env
 from models.ppo.policies import LatticeRecurrentActorCriticPolicy
 from main_dataset_recurrent_ppo import MODEL_PATTERN, get_number
 
+# python src/main_challenge_manipulation_phase2.py \
+#     --use_lattice \
+#     --load_path "../output/trained_agents/curriculum_step_9" \
+#     --num_envs 4 \
+#     --num_steps 100000 \
+#     --save_every 50000 \
+#     --checkpoint_num 4 \
+#     --batch_size 64
 
 parser = argparse.ArgumentParser(description="Main script to train an agent")
 
