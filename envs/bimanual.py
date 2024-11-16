@@ -15,15 +15,15 @@ from myosuite.utils.quat_math import euler2quat, mat2quat, quat2euler, quatDiff2
 
 
 CUSTOM_RWD_KEYS_AND_WEIGHTS = {
-    "reach_dist": 1.0,
+    "reach_dist": 0.0,
     "act": 0.0,
     "fin_dis": 0.0,
     "obs_shift": 1.0 * 10.0,
     # "obs_ori_shift": 1.0 * 10.0,
-    "fin_open": -1.0,
-    "mpl_fin_open": -1.0, 
+    "fin_open": 0.0,
+    "mpl_fin_open": 1.0, 
     "lift_height": 0.0,
-    "pass_err": 1.0,
+    "pass_err": 0.0,
     "lift_bonus": 0.0,
 }
 

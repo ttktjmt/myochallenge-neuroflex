@@ -82,7 +82,7 @@ policy = Policy(rc)
 shape = get_custom_observation(rc, custom_obs_keys).shape
 rc.set_output_keys(custom_obs_keys)
 
-model = PPO.load("../logs/ppo_model_6000_steps.zip")
+model = PPO.load("model.zip")
 
 flat_completed = None
 trial = 0
