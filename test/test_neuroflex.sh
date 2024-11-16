@@ -4,7 +4,7 @@ GreenBK='\033[1;42m'
 RedBK='\033[1;41m'
 RC='\033[0m'
 
-python environment/test_mani_environment.py &
+python environment/test_neuroflex_environment.py &
 
 # TO BE REPLACED WITH A DOCKER --> docker run myochallengeeval_mani_agent
 

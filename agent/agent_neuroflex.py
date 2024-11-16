@@ -21,10 +21,19 @@ from stable_baselines3 import PPO
 """
 Define your custom observation keys here
 """
-DEFAULT_OBS_KEYS = ["time", "myohand_qpos", "myohand_qvel", "pros_hand_qpos", "pros_hand_qvel", "object_qpos",
-                        "object_qvel", "touching_body"]
+DEFAULT_OBS_KEYS = [
+    'time',
+    'myohand_qpos',
+    'myohand_qvel',
+    'pros_hand_qpos',
+    'pros_hand_qvel',
+    'object_qpos',
+    'object_qvel',
+    'touching_body',
+    'act'
+]
 custom_obs_keys = [
-    "time", 
+    "time",
     'myohand_qpos',
     'myohand_qvel',
     'pros_hand_qpos',
@@ -47,7 +56,6 @@ def unpack_for_grpc(entity):
     return pickle.loads(entity)
 
 class Policy:
-
     def __init__(self, env):
         self.action_space = env.action_space
 
@@ -68,8 +76,7 @@ def get_custom_observation(rc, obs_keys):
 
     return rc.obsdict2obsvec(obs_dict, obs_keys)
 
-
-time.sleep(10)
+time.sleep(8)
 
 LOCAL_EVALUATION = os.environ.get("LOCAL_EVALUATION")
 
@@ -84,7 +91,10 @@ policy = Policy(rc)
 shape = get_custom_observation(rc, DEFAULT_OBS_KEYS).shape
 rc.set_output_keys(DEFAULT_OBS_KEYS)
 
-model = PPO.load("model.zip")
+if True:
+    model = PPO.load("agent/model")
+else:
+    model = PPO.load("model")
 
 flat_completed = None
 trial = 0
@@ -104,7 +114,9 @@ while not flat_completed:
         ################################################
         ## Replace with your trained policy.
         # obs = rc.obsdict2obsvec(rc.get_obsdict(), rc.obs_keys)[1]
-        obs = rc.obsdict2obsvec(rc.get_obsdict(), DEFAULT_OBS_KEYS)[1]
+        obs = rc.obsdict2obsvec(rc.get_obsdict(), DEFAULT_OBS_KEYS)
+        print(f"obs keys: {rc.get_obsdict().keys()}")
+        # print(f"obs: {obs}")
         action, _ = model.predict(obs, deterministic=True) # obs shape is different
         # hard-coding the myoHand to release object
         action[30] = 1
