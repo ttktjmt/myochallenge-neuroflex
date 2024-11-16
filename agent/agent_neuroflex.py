@@ -11,7 +11,8 @@ import numpy as np
 import evaluation_pb2
 import evaluation_pb2_grpc
 import grpc
-import gymnasium as gym
+# import gymnasium as gym
+# from myosuite.utils import gym
 
 from utils import RemoteConnection
 
