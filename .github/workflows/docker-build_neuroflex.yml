@@ -1,4 +1,4 @@
-name: P2 Submission Neuroflex
+name: Docker Build Test - Mani
 
 on: workflow_dispatch
 
@@ -28,16 +28,12 @@ jobs:
         echo ${{secrets.EvalAI_token}} | sed 's/./& /g' 
 
         evalai set_token ${{ secrets.EvalAI_token }}
-
             
     - name: Test that the registration was successful. MyoChallenge needs to be in the list returned
       run: evalai challenges --participant
     
     - name: Build the Docker image
       run: docker compose -f docker-compose-neuroflex.yml build
-
-    - name: Push to evalai
-      run: evalai push neuroflex_agent:latest --phase myochallenge2024-maniphase2-2373 --private
 
 
 
