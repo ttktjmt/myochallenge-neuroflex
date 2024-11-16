@@ -103,7 +103,13 @@ while not flat_completed:
         ## Replace with your trained policy.
         # obs = rc.obsdict2obsvec(rc.get_obsdict(), rc.obs_keys)[1]
         obs = rc.get_obsdict()
-        action, _ = model.predict(obs, deterministic=True)
+        # obsdict2obsvec
+        obs_list = [np.zeros(0)]
+        for key in obs.keys():
+            obs_list.append(obs[key].ravel())  # ravel helps with images
+        obsvec = np.concatenate(obs_list, dtype=np.float32)
+
+        action, _ = model.predict(obsvec, deterministic=True)
         # hard-coding the myoHand to release object
         action[30] = 1
         if step > 130:
