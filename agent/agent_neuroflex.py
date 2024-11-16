@@ -101,7 +101,8 @@ while not flat_completed:
 
         ################################################
         ## Replace with your trained policy.
-        obs = rc.obsdict2obsvec(rc.obs_dict, rc.obs_keys)[1]
+        # obs = rc.obsdict2obsvec(rc.get_obsdict(), rc.obs_keys)[1]
+        obs = rc.get_obsdict()
         action, _ = model.predict(obs, deterministic=True)
         # hard-coding the myoHand to release object
         action[30] = 1
