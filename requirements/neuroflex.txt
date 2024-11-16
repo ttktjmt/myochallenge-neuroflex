@@ -1,6 +1,7 @@
 grpcio
 grpcio-tools
 protobuf
+gymnasium
 pyglet
 # "git+https://github.com/aravindr93/mjrl.git"
 matplotlib

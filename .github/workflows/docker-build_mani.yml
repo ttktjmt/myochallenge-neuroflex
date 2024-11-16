@@ -1,4 +1,4 @@
-name: Docker Build Test - Mani
+name: Docker Build Test - Neuroflex
 
 on: workflow_dispatch
 
