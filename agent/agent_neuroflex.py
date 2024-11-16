@@ -1,6 +1,9 @@
 import os
 import pickle
 import time
+import sys
+util_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "utils")
+sys.path.append(util_path) # add utils path for local test
 
 import copy
 import numpy as np
