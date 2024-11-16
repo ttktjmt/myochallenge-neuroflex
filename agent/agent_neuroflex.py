@@ -21,6 +21,8 @@ from stable_baselines3 import PPO
 """
 Define your custom observation keys here
 """
+DEFAULT_OBS_KEYS = ["time", "myohand_qpos", "myohand_qvel", "pros_hand_qpos", "pros_hand_qvel", "object_qpos",
+                        "object_qvel", "touching_body"]
 custom_obs_keys = [
     "time", 
     'myohand_qpos',
@@ -79,8 +81,8 @@ else:
 policy = Policy(rc)
 
 # compute correct observation space using the custom keys
-shape = get_custom_observation(rc, custom_obs_keys).shape
-rc.set_output_keys(custom_obs_keys)
+shape = get_custom_observation(rc, DEFAULT_OBS_KEYS).shape
+rc.set_output_keys(DEFAULT_OBS_KEYS)
 
 model = PPO.load("model.zip")
 
@@ -102,8 +104,8 @@ while not flat_completed:
         ################################################
         ## Replace with your trained policy.
         # obs = rc.obsdict2obsvec(rc.get_obsdict(), rc.obs_keys)[1]
-        obs = rc.obsdict2obsvec(rc.get_obsdict(), custom_obs_keys)[1]
-        action, _ = model.predict(obs, deterministic=True)
+        obs = rc.obsdict2obsvec(rc.get_obsdict(), DEFAULT_OBS_KEYS)[1]
+        action, _ = model.predict(obs, deterministic=True) # obs shape is different
         # hard-coding the myoHand to release object
         action[30] = 1
         if step > 130:
