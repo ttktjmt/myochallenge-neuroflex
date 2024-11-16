@@ -6,5 +6,5 @@ services:
     env_file:
       - docker/agent/docker.env
     build:
-      context: ./docker/agent
-      dockerfile: Dockerfile_neuroflex
+      context: ./
+      dockerfile: docker/agent/Dockerfile_neuroflex
