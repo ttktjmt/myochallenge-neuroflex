@@ -12,6 +12,8 @@ import gymnasium as gym
 
 from utils import RemoteConnection
 
+from stable_baselines3 import PPO
+
 """
 Define your custom observation keys here
 """
@@ -76,6 +78,8 @@ policy = Policy(rc)
 shape = get_custom_observation(rc, custom_obs_keys).shape
 rc.set_output_keys(custom_obs_keys)
 
+model = PPO.load("../logs/ppo_model_6000_steps.zip")
+
 flat_completed = None
 trial = 0
 while not flat_completed:
@@ -92,7 +96,8 @@ while not flat_completed:
 
         ################################################
         ## Replace with your trained policy.
-        action = rc.action_space.sample()
+        obs = rc.obsdict2obsvec(rc.obs_dict, rc.obs_keys)[1]
+        action, _ = model.predict(obs, deterministic=True)
         ################################################
 
         base = rc.act_on_environment(action)
