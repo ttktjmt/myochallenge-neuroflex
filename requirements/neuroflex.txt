@@ -2,7 +2,7 @@ grpcio
 grpcio-tools
 protobuf
 pyglet
-git+https://github.com/aravindr93/mjrl.git
+# git+https://github.com/aravindr93/mjrl.git
 matplotlib
 requests
 scikit-learn
