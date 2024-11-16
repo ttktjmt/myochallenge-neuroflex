@@ -92,12 +92,32 @@ while not flat_completed:
 
     print(f"Trial: {trial}, flat_completed: {flat_completed}")
     counter = 0
-    while not flag_trial:
+    for step in range(1000):
+        if flag_trial: break
 
         ################################################
         ## Replace with your trained policy.
         obs = rc.obsdict2obsvec(rc.obs_dict, rc.obs_keys)[1]
         action, _ = model.predict(obs, deterministic=True)
+        # hard-coding the myoHand to release object
+        action[30] = 1
+        if step > 130:
+    #   if obs.
+            action[32:40] = 0
+            action[40:49] = 1
+
+        #hard coding the MPL to the desire position, since we know the actuation of the MPL is the last 17 index of action
+        action[-17:] = np.array([-0.65001469 , 1.     ,    -0.23187843 , 0.59583695 , 0.92356688, -0.16,
+                                -0.28 ,      -0.88   ,     0.25 ,      -0.846   ,   -0.24981132 ,-0.91823529,
+                                -0.945  ,    -0.925   ,   -0.929   ,   -0.49    ,   -0.18      ])
+        if step > 250:
+            action[-17:] = np.array([-0.4199236 ,  1.      ,   -0.9840558 ,  0.35299219,  0.92356688,  0.02095238,
+                                        -0.28    ,   -0.88  ,      0.25      , -0.846     , -0.24981132, -0.91823529,
+                                        -0.945   ,   -0.925   ,   -0.929    ,  -0.49     ,  -0.918     ])
+        if step > 350:
+            action[-17:] = np.array([-0.4199236 ,  1.     ,    -0.9840558,   0.35299219 , 0.3910828 ,  0.02095238,
+                                        -0.28    ,   -0.88     ,   0.25   ,    -0.846     , -0.24981132 ,-0.91823529,
+                                        -0.945    ,  -0.925    ,  -0.929    ,  -0.49  ,     -0.918     ])
         ################################################
 
         base = rc.act_on_environment(action)
