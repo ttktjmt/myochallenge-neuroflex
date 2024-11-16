@@ -30,7 +30,7 @@ DEFAULT_OBS_KEYS = [
     'object_qpos',
     'object_qvel',
     'touching_body',
-    'act'
+    'act',
 ]
 custom_obs_keys = [
     "time",
@@ -91,10 +91,7 @@ policy = Policy(rc)
 shape = get_custom_observation(rc, DEFAULT_OBS_KEYS).shape
 rc.set_output_keys(DEFAULT_OBS_KEYS)
 
-if True:
-    model = PPO.load("agent/model")
-else:
-    model = PPO.load("model")
+model = PPO.load("model")
 
 flat_completed = None
 trial = 0
