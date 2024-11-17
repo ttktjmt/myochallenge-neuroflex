@@ -118,10 +118,12 @@ while not flat_completed:
         # hard-coding the myoHand to release object
         action[30] = 1
         if step > 130:
-    #   if obs.
+        # if obs.
             action[32:40] = 0
             action[40:49] = 1
 
+        # hard code grasping motion of MPL
+        
         #hard coding the MPL to the desire position, since we know the actuation of the MPL is the last 17 index of action
         action[-17:] = np.array([-0.65001469 , 1.     ,    -0.23187843 , 0.59583695 , 0.92356688, -0.16,
                                 -0.28 ,      -0.88   ,     0.25 ,      -0.846   ,   -0.24981132 ,-0.91823529,
