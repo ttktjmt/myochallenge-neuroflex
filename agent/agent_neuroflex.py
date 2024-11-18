@@ -116,7 +116,7 @@ while not flat_completed:
         # obs = rc.obsdict2obsvec(rc.get_obsdict(), rc.obs_keys)[1]
         obs_dict = rc.get_obsdict()
         obs = rc.obsdict2obsvec(obs_dict, DEFAULT_OBS_KEYS)
-        print(f"obs keys: {rc.get_obsdict().keys()}")
+        # print(f"obs keys: {rc.get_obsdict().keys()}")
         # print(f"obs: {obs}")
         action, _ = model.predict(obs, deterministic=True) # obs shape is different
         # hard-coding the myoHand to release object
