@@ -91,12 +91,7 @@ policy = Policy(rc)
 shape = get_custom_observation(rc, DEFAULT_OBS_KEYS).shape
 rc.set_output_keys(DEFAULT_OBS_KEYS)
 
-model = PPO.load("baseline")
-release_threshold = 0.08
-released_step = -1
-waiting_step1 = 80
-waiting_step2 = 130
-waiting_step3 = 170
+model = PPO.load("model")
 
 flat_completed = None
 trial = 0
@@ -122,27 +117,24 @@ while not flat_completed:
         # print(f"obs: {obs}")
         action, _ = model.predict(obs, deterministic=True) # obs shape is different
         # hard-coding the myoHand to release object
+          # hard-coding the myoHand to release object
         action[30] = 1
-        obj_xpos = obs_dict['object_qpos'][0]
-        if obj_xpos > release_threshold:
-            if released_step == -1: released_step = step
-        
-        if step - released_step > waiting_step1:
+        if step > 130:
             action[32:40] = 0
             action[40:49] = 1
 
-        #hard coding the MPL to the desire position
-        action[-17:] = np.array([-0.65001469, 1., -0.23187843, 0.59583695, 0.92356688, -0.16,
-                                -0.28, -0.88, 0.25, -0.846, -0.24981132, -0.91823529,
-                                -0.945, -0.925, -0.929, -0.49, -0.18])
-        if step - released_step > waiting_step2:
-            action[-17:] = np.array([-0.4199236, 1., -0.9840558, 0.35299219, 0.92356688, 0.02095238,
-                                    -0.28, -0.88, 0.25, -0.846, -0.24981132, -0.91823529,
-                                    -0.945, -0.925, -0.929, -0.49, -0.918])
-        if step > waiting_step3:
-            action[-17:] = np.array([-0.4199236, 1., -0.9840558, 0.35299219, 0.3910828, 0.02095238,
-                                    -0.28, -0.88, 0.25, -0.846, -0.24981132, -0.91823529,
-                                    -0.945, -0.925, -0.929, -0.49, -0.918])
+        #hard coding the MPL to the desire position, since we know the actuation of the MPL is the last 17 index of action
+        action[-17:] = np.array([-0.65001469 , 1.     ,    -0.23187843 , 0.59583695 , 0.92356688, -0.16,
+                                -0.28 ,      -0.88   ,     0.25 ,      -0.846   ,   -0.24981132 ,-0.91823529,
+                                -0.945  ,    -0.925   ,   -0.929   ,   -0.49    ,   -0.18      ])
+        if step > 250:
+            action[-17:] = np.array([-0.4199236 ,  1.      ,   -0.9840558 ,  0.35299219,  0.92356688,  0.02095238,
+                                        -0.28    ,   -0.88  ,      0.25      , -0.846     , -0.24981132, -0.91823529,
+                                        -0.945   ,   -0.925   ,   -0.929    ,  -0.49     ,  -0.918     ])
+        if step > 270:
+            action[-17:] = np.array([-0.4199236 ,  1.     ,    -0.9840558,   0.35299219 , 0.3910828 ,  0.02095238,
+                                        -0.28    ,   -0.88     ,   0.25   ,    -0.846     , -0.24981132 ,-0.91823529,
+                                        -0.945    ,  -0.925    ,  -0.929    ,  -0.49  ,     -0.918     ])
         ################################################
 
         base = rc.act_on_environment(action)
