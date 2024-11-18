@@ -91,7 +91,7 @@ policy = Policy(rc)
 shape = get_custom_observation(rc, DEFAULT_OBS_KEYS).shape
 rc.set_output_keys(DEFAULT_OBS_KEYS)
 
-model = PPO.load("model")
+model = PPO.load("baseline")
 
 flat_completed = None
 trial = 0
@@ -123,7 +123,7 @@ while not flat_completed:
             action[40:49] = 1
 
         # hard code grasping motion of MPL
-        
+
         #hard coding the MPL to the desire position, since we know the actuation of the MPL is the last 17 index of action
         action[-17:] = np.array([-0.65001469 , 1.     ,    -0.23187843 , 0.59583695 , 0.92356688, -0.16,
                                 -0.28 ,      -0.88   ,     0.25 ,      -0.846   ,   -0.24981132 ,-0.91823529,
