@@ -94,7 +94,8 @@ rc.set_output_keys(DEFAULT_OBS_KEYS)
 model = PPO.load("baseline")
 release_threshold = 0.08
 released_step = -1
-waiting_step = 70
+waiting_step1 = 100
+waiting_step2 = 50
 
 flat_completed = None
 trial = 0
@@ -132,11 +133,11 @@ while not flat_completed:
         action[-17:] = np.array([-0.65001469, 1., -0.23187843, 0.59583695, 0.92356688, -0.16,
                                 -0.28, -0.88, 0.25, -0.846, -0.24981132, -0.91823529,
                                 -0.945, -0.925, -0.929, -0.49, -0.18])
-        if step - released_step > waiting_step:
+        if step - released_step > waiting_step1:
             action[-17:] = np.array([-0.4199236, 1., -0.9840558, 0.35299219, 0.92356688, 0.02095238,
                                     -0.28, -0.88, 0.25, -0.846, -0.24981132, -0.91823529,
                                     -0.945, -0.925, -0.929, -0.49, -0.918])
-        if step - released_step > 2 * waiting_step:
+        if step - released_step > 2 * waiting_step2:
             action[-17:] = np.array([-0.4199236, 1., -0.9840558, 0.35299219, 0.3910828, 0.02095238,
                                     -0.28, -0.88, 0.25, -0.846, -0.24981132, -0.91823529,
                                     -0.945, -0.925, -0.929, -0.49, -0.918])
