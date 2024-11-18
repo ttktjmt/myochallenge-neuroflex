@@ -121,7 +121,7 @@ while not flat_completed:
         action, _ = model.predict(obs, deterministic=True) # obs shape is different
         # hard-coding the myoHand to release object
         action[30] = 1
-        obj_xpos = obs_dict['object_qpos'][0]
+        obj_xpos = obs_dict['object_qpos'][2]
         # if step > 130:
         if obj_xpos < release_threshold:
             if released_step == -1: released_step = step
