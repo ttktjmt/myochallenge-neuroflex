@@ -92,10 +92,11 @@ shape = get_custom_observation(rc, DEFAULT_OBS_KEYS).shape
 rc.set_output_keys(DEFAULT_OBS_KEYS)
 
 model = PPO.load("baseline")
-release_threshold = 0.08
+release_threshold = 0.1
 released_step = -1
-waiting_step1 = 100
-waiting_step2 = 50
+waiting_step1 = 80
+waiting_step2 = 130
+waiting_step3 = 170
 
 flat_completed = None
 trial = 0
@@ -123,9 +124,10 @@ while not flat_completed:
         # hard-coding the myoHand to release object
         action[30] = 1
         obj_xpos = obs_dict['object_qpos'][0]
-        # if step > 130:
         if obj_xpos > release_threshold:
             if released_step == -1: released_step = step
+        
+        if step - released_step > waiting_step1:
             action[32:40] = 0
             action[40:49] = 1
 
@@ -133,11 +135,11 @@ while not flat_completed:
         action[-17:] = np.array([-0.65001469, 1., -0.23187843, 0.59583695, 0.92356688, -0.16,
                                 -0.28, -0.88, 0.25, -0.846, -0.24981132, -0.91823529,
                                 -0.945, -0.925, -0.929, -0.49, -0.18])
-        if step - released_step > waiting_step1:
+        if step - released_step > waiting_step2:
             action[-17:] = np.array([-0.4199236, 1., -0.9840558, 0.35299219, 0.92356688, 0.02095238,
                                     -0.28, -0.88, 0.25, -0.846, -0.24981132, -0.91823529,
                                     -0.945, -0.925, -0.929, -0.49, -0.918])
-        if step - released_step > 2 * waiting_step2:
+        if step > waiting_step3:
             action[-17:] = np.array([-0.4199236, 1., -0.9840558, 0.35299219, 0.3910828, 0.02095238,
                                     -0.28, -0.88, 0.25, -0.846, -0.24981132, -0.91823529,
                                     -0.945, -0.925, -0.929, -0.49, -0.918])
