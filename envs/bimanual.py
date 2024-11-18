@@ -62,7 +62,7 @@ class CustomBimanualEnv(BimanualEnvV1):
         # user parameters
         self.task_choice = task_choice
         self.proximity_th = proximity_th
-        self.object_target_pos = (0.0, 0.0, 0.0)
+        self.object_target_pos = (0.15, -0.25, 1.15)
 
 
         # start position centers (before changes)
@@ -306,9 +306,9 @@ class CustomBimanualEnv(BimanualEnvV1):
         
         touching_vec = obs_dict["touching_body"][0][0] if obs_dict['touching_body'].ndim == 3 else obs_dict['touching_body']
 
-        object_shift_dist = np.linalg.norm(np.squeeze(self.obs_dict['obj_pos'])[:2] - self.object_shift_pos[:2])
+        object_shift_dist = np.linalg.norm(np.squeeze(self.obs_dict['obj_pos']) - self.object_shift_pos)
         #using only x and y coordinates for distance calculation
-        object_shift_reward = np.exp(-5.0 * np.linalg.norm(np.squeeze(self.obs_dict['obj_pos'])[:2] - self.object_shift_pos[:2]) * 10.0 )
+        object_shift_reward = np.exp(-5.0 * object_shift_dist * 10.0 )
 
         if touching_vec[3] == 1:
             self.goal_touch += 1
