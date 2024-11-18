@@ -91,7 +91,7 @@ policy = Policy(rc)
 shape = get_custom_observation(rc, DEFAULT_OBS_KEYS).shape
 rc.set_output_keys(DEFAULT_OBS_KEYS)
 
-model = PPO.load("model")
+model = PPO.load("model.zip")
 
 flat_completed = None
 trial = 0
