@@ -92,7 +92,7 @@ shape = get_custom_observation(rc, DEFAULT_OBS_KEYS).shape
 rc.set_output_keys(DEFAULT_OBS_KEYS)
 
 model = PPO.load("baseline")
-release_threshold = 0.15
+release_threshold = 0.03
 released_step = -1
 waiting_step = 20
 
@@ -121,9 +121,9 @@ while not flat_completed:
         action, _ = model.predict(obs, deterministic=True) # obs shape is different
         # hard-coding the myoHand to release object
         action[30] = 1
-        obj_xpos = obs_dict['object_qpos'][2]
+        obj_xpos = obs_dict['object_qpos'][0]
         # if step > 130:
-        if obj_xpos < release_threshold:
+        if obj_xpos > release_threshold:
             if released_step == -1: released_step = step
             action[32:40] = 0
             action[40:49] = 1
