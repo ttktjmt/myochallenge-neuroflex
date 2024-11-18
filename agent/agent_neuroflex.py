@@ -94,7 +94,7 @@ rc.set_output_keys(DEFAULT_OBS_KEYS)
 model = PPO.load("baseline")
 release_threshold = 0.1
 released_step = -1
-waiting_step = 30
+waiting_step = 50
 
 flat_completed = None
 trial = 0
