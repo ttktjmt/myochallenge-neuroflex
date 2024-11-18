@@ -92,9 +92,9 @@ shape = get_custom_observation(rc, DEFAULT_OBS_KEYS).shape
 rc.set_output_keys(DEFAULT_OBS_KEYS)
 
 model = PPO.load("baseline")
-release_threshold = 0.05
+release_threshold = 0.08
 released_step = -1
-waiting_step = 50
+waiting_step = 70
 
 flat_completed = None
 trial = 0
