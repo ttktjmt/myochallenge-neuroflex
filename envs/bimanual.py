@@ -62,7 +62,7 @@ class CustomBimanualEnv(BimanualEnvV1):
         # user parameters
         self.task_choice = task_choice
         self.proximity_th = proximity_th
-        self.object_target_pos = (0.15, -0.25, 1.15)
+        self.object_target_pos = (0, 0, 0)
 
 
         # start position centers (before changes)
