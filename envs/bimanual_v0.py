@@ -1,38 +1,48 @@
-import numpy as np
+""" =================================================
+# Copyright (c) MyoSuite Authors
+Authors  :: Vikash Kumar (vikashplus@gmail.com), Vittorio Caggiano (caggiano@gmail.com), Balint Hodossy (bkh16@ic.ac.uk), 
+            Eric Lyu (shirui.lyu@kcl.ac.uk), Cheryl Wang (cheryl.wang.huiyi@gmail.com), Guillaume Durandau (guillaume.durandau@mcgill.ca)
+================================================= """
+
 import collections
 import enum
-import mujoco
-from typing import List
+import os, time
 
 from scipy.spatial.transform import Rotation as R
-
+import mujoco
 from myosuite.utils import gym
-from myosuite.envs.myo.myochallenge.bimanual_v0 import BimanualEnvV1
+import numpy as np
+from myosuite.utils.quat_math import mat2euler, euler2quat
+from typing import List
 
 from myosuite.envs.myo.base_v0 import BaseV0
-from myosuite.utils.quat_math import quat2euler
-from myosuite.utils.quat_math import euler2quat, mat2quat, quat2euler, quatDiff2Vel, mat2euler
+
+CONTACT_TRAJ_MIN_LENGTH = 100
 
 
-CUSTOM_RWD_KEYS_AND_WEIGHTS = {
-    "reach_dist": 0.0,
-    "act": 0.0,
-    "fin_dis": 0.0,
-    "obs_shift": 1.0 * 10.0,
-    # "obs_ori_shift": 1.0 * 10.0,
-    "fin_open": 0.0,
-    "mpl_fin_open": 1.0, 
-    "lift_height": 0.0,
-    "pass_err": 0.0,
-    "lift_bonus": 0.0,
-}
+class BimanualEnvV1(BaseV0):
+    DEFAULT_OBS_KEYS = ["time", "myohand_qpos", "myohand_qvel", "pros_hand_qpos", "pros_hand_qvel", "object_qpos",
+                        "object_qvel", "touching_body"]
 
-class CustomBimanualEnv(BimanualEnvV1):
+    DEFAULT_RWD_KEYS_AND_WEIGHTS = {
+        "reach_dist": -.1,
+        "act": 0,
+        "fin_dis": -0.5,
+        # "fin_open": -1,
+        # "lift_height": 2,
+        "pass_err": -1,
+        # "lift_bonus": 1,
+    }
 
     def __init__(self, model_path, obsd_model_path=None, seed=None, **kwargs):
+        # Two step construction (init+setup) is required for pickling to work correctly.
         gym.utils.EzPickle.__init__(self, model_path, obsd_model_path, seed, **kwargs)
-        BaseV0.__init__(self, model_path=model_path, obsd_model_path=obsd_model_path, seed=seed, env_credits=self.MYO_CREDIT)
+        super().__init__(model_path=model_path, obsd_model_path=obsd_model_path, seed=seed, env_credits=self.MYO_CREDIT)
         self._setup(**kwargs)
+
+    """
+    TODO update set up function for the new environments
+    """
 
     def _setup(self,
                frame_skip: int = 10,
@@ -40,7 +50,7 @@ class CustomBimanualEnv(BimanualEnvV1):
                goal_center=np.array([0.4, -0.25, 1.05]),
                max_force=1500,  # Max force against throwing
 
-               proximity_th=0.015,  # object-target proximity threshold
+               proximity_th=0.17,  # object-target proximity threshold, based on 10cm in each axis in Euclidean Distance
 
                start_shifts=np.array([0.055, 0.055, 0]),
                # shift factor for start/goal random generation with z-axis fixed
@@ -51,19 +61,16 @@ class CustomBimanualEnv(BimanualEnvV1):
                obj_friction_change=None,  # object friction change (relative to initial size)
                # {'high': [1.2, 0.006, 0.00012], 'low': [0.8, 0.004, 0.00008]},  # friction change
                task_choice='fixed',  # fixed/ random
-               obs_keys: list = BimanualEnvV1.DEFAULT_OBS_KEYS,
-               weighted_reward_keys: dict = BimanualEnvV1.DEFAULT_RWD_KEYS_AND_WEIGHTS, #DEFAULT_RWD_KEYS_AND_WEIGHTS,
+               obs_keys: list = DEFAULT_OBS_KEYS,
+               weighted_reward_keys: list = DEFAULT_RWD_KEYS_AND_WEIGHTS,
                start_pos=(-0.4, -0.25),
                goal_pos=(0.4, -0.25),
                **kwargs,
                ):
-        
 
         # user parameters
         self.task_choice = task_choice
         self.proximity_th = proximity_th
-        self.object_target_pos = (0, 0, 0)
-
 
         # start position centers (before changes)
         self.start_center = start_center
@@ -71,6 +78,7 @@ class CustomBimanualEnv(BimanualEnvV1):
 
         self.start_shifts = start_shifts
         self.goal_shifts = goal_shifts
+        self.PILLAR_HEIGHT = 1.09
 
         self.id_info = IdInfo(self.sim.model)
 
@@ -98,16 +106,6 @@ class CustomBimanualEnv(BimanualEnvV1):
         self.Rpalm1_sid = self.sim.model.site_name2id('prosthesis/palm_thumb')
         self.Rpalm2_sid = self.sim.model.site_name2id('prosthesis/palm_pinky')
 
-        #added mpl fingers for reward calculation
-        self.mpl_fin0 = self.sim.model.site_name2id("prosthesis/thumb_distal")
-        self.mpl_fin1 = self.sim.model.site_name2id("prosthesis/index_distal")
-        self.mpl_fin2 = self.sim.model.site_name2id("prosthesis/middle_distal")
-        self.mpl_fin3 = self.sim.model.site_name2id("prosthesis/ring_distal")
-        self.mpl_fin4 = self.sim.model.site_name2id("prosthesis/pinky_distal")
-        # self.Rpalm3_sid = self.sim.model.site_name2id('prosthesis/palm_pinky')
-        
-
-
         self.start_pos = self.start_center
         self.goal_pos = self.goal_center
 
@@ -120,9 +118,6 @@ class CustomBimanualEnv(BimanualEnvV1):
         self.goal_touch = 0
         self.TARGET_GOAL_TOUCH = 5
 
-        self.object_shift_pos = self.sim.data.site_xpos[self.obj_sid] + np.array(self.object_target_pos)
-        self.ini_object_ori = mat2quat(np.reshape(self.sim.data.site_xmat[self.obj_sid].copy(), (3, 3)))
-        self.ini_mpl_palm_pos = (self.sim.data.site_xpos[self.Rpalm1_sid] + self.sim.data.site_xpos[self.Rpalm2_sid]) / 2
 
         self.touch_history = []
 
@@ -147,8 +142,7 @@ class CustomBimanualEnv(BimanualEnvV1):
         self.init_qpos[:] = self.sim.model.key_qpos[2].copy()
         # adding random disturbance to start and goal positions, coefficients might need to be adaptable
         self.initialized_pos = False
-        self.rwd_keys_wt = weighted_reward_keys
-        
+
     def _obj_label_to_obs(self, touching_body):
         # Function to convert touching body set to a binary observation vector
         # order follows the definition in enum class
@@ -231,26 +225,14 @@ class CustomBimanualEnv(BimanualEnvV1):
         obs_dict['fin3'] = sim.data.site_xpos[self.fin3]
         obs_dict['fin4'] = sim.data.site_xpos[self.fin4]
 
-        obs_dict['mpl_fin0'] = sim.data.site_xpos[self.mpl_fin0]
-        obs_dict['mpl_fin1'] = sim.data.site_xpos[self.mpl_fin1]
-        obs_dict['mpl_fin2'] = sim.data.site_xpos[self.mpl_fin2]
-        obs_dict['mpl_fin3'] = sim.data.site_xpos[self.mpl_fin3]
-        obs_dict['mpl_fin4'] = sim.data.site_xpos[self.mpl_fin4]
-
         obs_dict["Rpalm_pos"] = (sim.data.site_xpos[self.Rpalm1_sid] + sim.data.site_xpos[self.Rpalm2_sid]) / 2
 
         obs_dict['MPL_ori'] = mat2euler(np.reshape(self.sim.data.site_xmat[self.Rpalm1_sid], (3, 3)))
         obs_dict['MPL_ori_err'] = obs_dict['MPL_ori'] - np.array([np.pi, 0, np.pi])
 
         obs_dict["obj_pos"] = sim.data.site_xpos[self.obj_sid]
-        obs_dict["obj_ori_quat"] = mat2quat(np.reshape(self.sim.data.site_xmat[self.obj_sid].copy(), (3, 3)))
-        
-        above_obj = obs_dict["obj_pos"].copy()
-        
-        above_obj[-1] += 0.15#include offset in z 
-        # print(obs_dict["obj_pos"], above_obj)
-        obs_dict["reach_err"] = obs_dict["palm_pos"] - above_obj #obs_dict["obj_pos"]
-        obs_dict["pass_err"] = obs_dict["Rpalm_pos"] - (self.object_shift_pos + self.ini_mpl_palm_pos) * 0.5 #obs_dict["obj_pos"]
+        obs_dict["reach_err"] = obs_dict["palm_pos"] - obs_dict["obj_pos"]
+        obs_dict["pass_err"] = obs_dict["Rpalm_pos"] - obs_dict["obj_pos"]
 
         if sim.model.na > 0:
             obs_dict["act"] = sim.data.act[:].copy()
@@ -263,42 +245,18 @@ class CustomBimanualEnv(BimanualEnvV1):
         pass_dist = np.abs(np.linalg.norm(obs_dict['pass_err'], axis=-1))
 
         obj_pos = obs_dict["obj_pos"][0][0] if obs_dict['obj_pos'].ndim == 3 else obs_dict['obj_pos']
-        obj_ori = obs_dict['obj_ori_quat']
-        
         palm_pos = obs_dict["palm_pos"][0][0] if obs_dict["palm_pos"].ndim == 3 else obs_dict["palm_pos"]
         goal_pos = obs_dict["goal_pos"][0][0] if obs_dict["goal_pos"].ndim == 3 else obs_dict["goal_pos"]
+        goal_pos = np.concatenate((goal_pos[:2], np.array([self.PILLAR_HEIGHT])))
 
         lift_height = np.linalg.norm(np.array([[[obj_pos[-1], palm_pos[-1]]]]) -
                                      np.array([[[self.init_obj_z, self.init_palm_z]]]), axis=-1)
         lift_height = 5 * np.exp(-10 * (lift_height - self.target_z) ** 2) - 5
 
-        
         act = np.linalg.norm(obs_dict['act'], axis=-1) / self.sim.model.na if self.sim.model.na != 0 else 0
-        
         fin_keys = ['fin0', 'fin1', 'fin2', 'fin3', 'fin4']
-        myo_fin_errors = []
-        for i, fin in enumerate(fin_keys):
-            if i == 0:
-                myo_fin_errors.append(0.3 * np.linalg.norm(obs_dict[fin] - obs_dict['palm_pos'], axis=-1))
-            else:
-                myo_fin_errors.append(np.linalg.norm(obs_dict[fin] - obs_dict['palm_pos'], axis=-1))
-
-        # fin_open = sum(np.linalg.norm(obs_dict[fin] - obs_dict['palm_pos'], axis=-1) for fin in fin_keys)
+        fin_open = sum(np.linalg.norm(obs_dict[fin] - obs_dict['palm_pos'], axis=-1) for fin in fin_keys)
         fin_dis = sum(np.linalg.norm(obs_dict[fin] - obs_dict['obj_pos'], axis=-1) for fin in fin_keys)
-
-        
-        mpl_fin_keys = ['mpl_fin0', 'mpl_fin1', 'mpl_fin2', 'mpl_fin3', 'mpl_fin4']
-        mpl_fin_errors = []
-        for i, mpl_fin in enumerate(mpl_fin_keys):
-            if i == 0:
-                mpl_fin_errors.append(0.3 * np.linalg.norm(obs_dict[mpl_fin] - obs_dict['Rpalm_pos'], axis=-1))
-            else:
-                mpl_fin_errors.append(np.linalg.norm(obs_dict[mpl_fin] - obs_dict['Rpalm_pos'], axis=-1))
-                
-            
-        # mpl_fin_open = sum(np.linalg.norm(obs_dict[mpl_fin] - obs_dict["Rpalm_pos"], axis=-1) for mpl_fin in mpl_fin_keys)
-
-        # print("calling reward dict")
 
         elbow_err = 5 * np.exp(-10 * (obs_dict['elbow_fle'][0] - 1.) ** 2) - 5
         goal_dis = np.array(
@@ -306,38 +264,28 @@ class CustomBimanualEnv(BimanualEnvV1):
         
         touching_vec = obs_dict["touching_body"][0][0] if obs_dict['touching_body'].ndim == 3 else obs_dict['touching_body']
 
-        object_shift_dist = np.linalg.norm(np.squeeze(self.obs_dict['obj_pos'])[:2] - self.object_shift_pos[:2])
-        #using only x and y coordinates for distance calculation
-        object_shift_reward = np.exp(-5.0 * np.linalg.norm(np.squeeze(self.obs_dict['obj_pos'])[:2] - self.object_shift_pos[:2]) * 10.0 )
-
         if touching_vec[3] == 1:
             self.goal_touch += 1
-            
-        mpl_open_fin = sum(np.array([np.exp(-5.0*error) for error in mpl_fin_errors]))
-        myo_open_fin = sum(np.array([np.exp(-5.0*error) for error in myo_fin_errors]))
-        
         rwd_dict = collections.OrderedDict(
             (
                 # Optional Keys
-                ("reach_dist", np.exp(-5.0 * reach_dist)),#reach_dist + np.log(reach_dist + 1e-6)),
+                ("reach_dist", reach_dist + np.log(reach_dist + 1e-6)),
                 ("act", act),
-                ("fin_open", myo_open_fin),#np.exp(-5.0 * fin_open * 15.0 )),  # fin_open + np.log(fin_open +1e-8)
-                ("mpl_fin_open", mpl_open_fin),#np.exp(-5.0 * mpl_fin_open * 15.0 )),
+                ("fin_open", np.exp(-5 * fin_open)),  # fin_open + np.log(fin_open +1e-8)
                 ("fin_dis", fin_dis + np.log(fin_dis + 1e-6)),
                 ("lift_bonus", elbow_err),
                 ("lift_height", lift_height),
-                ("pass_err", np.exp(-5.0 * pass_dist)),#pass_dist + np.log(pass_dist + 1e-3)),
-                ("obs_shift", np.array([[object_shift_reward]])),
+                ("pass_err", pass_dist + np.log(pass_dist + 1e-3)),
                 # Must keys
                 ("sparse", 0),
                 ("goal_dist", goal_dis), 
-                ("solved", pass_dist < 0.1 and reach_dist < 0.15 and object_shift_dist < 0.009),  # goal_dis < self.proximity_th and self.goal_touch >= self.TARGET_GOAL_TOUCH),
-                ("done", object_shift_dist > 0.009),# self._get_done(obj_pos[-1])),
+                ("solved", goal_dis < self.proximity_th and self.goal_touch >= self.TARGET_GOAL_TOUCH),
+                ("done", self._get_done(obj_pos[-1])),
             )
         )
 
         rwd_dict["dense"] = np.sum(
-            [wt * rwd_dict[key] for key, wt in CUSTOM_RWD_KEYS_AND_WEIGHTS.items()], axis=0
+            [wt * rwd_dict[key] for key, wt in self.rwd_keys_wt.items()], axis=0
         )
 
         return rwd_dict
@@ -396,50 +344,46 @@ class CustomBimanualEnv(BimanualEnvV1):
         return metrics
 
     def reset(self, **kwargs):
-        # self.start_pos = self.start_center + self.start_shifts * (2 * self.np_random.random(3) - 1)
-        # self.goal_pos = self.goal_center + self.goal_shifts * (2 * self.np_random.random(3) - 1)
-        # #
-        # self.sim.model.body_pos[self.start_bid] = self.start_pos
-        # self.sim.model.body_pos[self.goal_bid] = self.goal_pos
-        # self.touch_history = []
-        # self.over_max = False
-        # self.goal_touch = 0
+        self.start_pos = self.start_center + self.start_shifts * (2 * self.np_random.random(3) - 1)
+        self.goal_pos = self.goal_center + self.goal_shifts * (2 * self.np_random.random(3) - 1)
+        #
+        self.sim.model.body_pos[self.start_bid] = self.start_pos
+        self.sim.model.body_pos[self.goal_bid] = self.goal_pos
+        self.touch_history = []
+        self.over_max = False
+        self.goal_touch = 0
 
-        # # box mass changes
-        # if self.obj_mass_range:
-        #     self.sim.model.body_mass[self.obj_bid] = self.np_random.uniform(
-        #         **self.obj_mass_range)  # call to mj_setConst(m,d) is being ignored. Derive quantities wont be updated. Die is simple shape. So this is reasonable approximation.
+        # box mass changes
+        if self.obj_mass_range:
+            self.sim.model.body_mass[self.obj_bid] = self.np_random.uniform(
+                **self.obj_mass_range)  # call to mj_setConst(m,d) is being ignored. Derive quantities wont be updated. Die is simple shape. So this is reasonable approximation.
 
-        # # box friction changes
-        # if self.obj_friction_range:
-        #     self.sim.model.geom_friction[self.obj_gid] = self.np_random.uniform(**self.obj_friction_range)
+        # box friction changes
+        if self.obj_friction_range:
+            self.sim.model.geom_friction[self.obj_gid] = self.np_random.uniform(**self.obj_friction_range)
 
-        # # box size changes
-        # if self.obj_scale_range and not self.ignore_first_scale:
-        #     obj_scales = self.np_random.uniform(**self.obj_scale_range) + 1
-        #     self.sim.model.geom(self.obj_gid).size = self.obj_size0 * obj_scales
+        # box size changes
+        if self.obj_scale_range and not self.ignore_first_scale:
+            obj_scales = self.np_random.uniform(**self.obj_scale_range) + 1
+            self.sim.model.geom(self.obj_gid).size = self.obj_size0 * obj_scales
 
-        #     if self.sim.renderer._window:
-        #         self.sim.model.mesh_vert[self.obj_vert_addr] = obj_scales[None, :] * self.mesh_vert0
-        #         self.sim.renderer._window.update_mesh(self.obj_mid)
-        # else:
-        #     self.ignore_first_scale = False
-        # self.sim.forward()
+            if self.sim.renderer._window:
+                self.sim.model.mesh_vert[self.obj_vert_addr] = obj_scales[None, :] * self.mesh_vert0
+                self.sim.renderer._window.update_mesh(self.obj_mid)
+        else:
+            self.ignore_first_scale = False
+        self.sim.forward()
 
         self.init_qpos[:] = self.sim.model.key_qpos[2].copy()
-        self.init_qpos[:-14] *= 0 # Use fully open as init pos
+        # self.init_qpos[:-14] *= 0 # Use fully open as init pos
 
-        obs = super().reset()
-        
+        obs = super().reset(
+            reset_qpos=self.init_qpos, reset_qvel=self.init_qvel, **kwargs
+        )
         object_qpos_adr = self.sim.model.body(self.obj_bid).jntadr[0]
         self.sim.data.qpos[object_qpos_adr:object_qpos_adr + 3] = self.start_pos + np.array([0, 0, 0.1])
         self.init_obj_z = self.sim.data.site_xpos[self.obj_sid][-1]
         self.init_palm_z = self.sim.data.site_xpos[self.palm_sid][-1]
-        
-        self.object_shift_pos = self.sim.data.site_xpos[self.obj_sid] + np.array(self.object_target_pos)
-        self.ini_mpl_palm_pos = (self.sim.data.site_xpos[self.Rpalm1_sid] + self.sim.data.site_xpos[self.Rpalm2_sid]) / 2
-        self.ini_object_ori = mat2quat(np.reshape(self.sim.data.site_xmat[self.obj_sid].copy(), (3, 3)))
-        
         return obs
 
 
@@ -532,4 +476,3 @@ def evaluate_contact_trajectory(contact_trajectory: List[set]):
     # Check if only goal was touching object for the last CONTACT_TRAJ_MIN_LENGTH frames
     elif not np.all([{ObjLabels.GOAL} == s for s in contact_trajectory[-CONTACT_TRAJ_MIN_LENGTH:]]):
         return ContactTrajIssue.NO_GOAL
-        
