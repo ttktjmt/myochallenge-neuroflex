@@ -363,15 +363,7 @@ class CustomBimanualEnv(BimanualEnvV1):
         return 0
 
     def step(self, a, **kwargs):
-        # We unnormalize robotic actuators, muscle ones are handled in the parent implementation
-        processed_controls = a.copy()
-        if self.normalize_act:
-            robotic_act_ind = self.sim.model.actuator_dyntype != mujoco.mjtDyn.mjDYN_MUSCLE
-            processed_controls[robotic_act_ind] = (np.mean(self.sim.model.actuator_ctrlrange[robotic_act_ind], axis=-1)
-                                                   + processed_controls[robotic_act_ind]
-                                                   * (self.sim.model.actuator_ctrlrange[robotic_act_ind, 1]
-                                                      - self.sim.model.actuator_ctrlrange[robotic_act_ind, 0]) / 2.0)
-        return super().step(processed_controls, **kwargs)
+        return super().step(a, **kwargs)
 
 
     def get_metrics(self, paths, successful_steps=5):
