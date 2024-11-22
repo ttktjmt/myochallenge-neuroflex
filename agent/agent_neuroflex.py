@@ -91,7 +91,7 @@ policy = Policy(rc)
 shape = get_custom_observation(rc, DEFAULT_OBS_KEYS).shape
 rc.set_output_keys(DEFAULT_OBS_KEYS)
 
-model = PPO.load("model.zip")
+model = PPO.load("agent/model")
 release_threshold = 0.08
 released_step = -1
 waiting_step1 = 100
