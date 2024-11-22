@@ -92,6 +92,11 @@ shape = get_custom_observation(rc, DEFAULT_OBS_KEYS).shape
 rc.set_output_keys(DEFAULT_OBS_KEYS)
 
 model = PPO.load("model.zip")
+release_threshold = 0.08
+released_step = -1
+waiting_step1 = 100
+waiting_step2 = 150
+waiting_step3 = 200
 
 flat_completed = None
 trial = 0
@@ -110,31 +115,31 @@ while not flat_completed:
 
         ################################################
         ## Replace with your trained policy.
-        # obs = rc.obsdict2obsvec(rc.get_obsdict(), rc.obs_keys)[1]
         obs_dict = rc.get_obsdict()
         obs = rc.obsdict2obsvec(obs_dict, DEFAULT_OBS_KEYS)
-        # print(f"obs keys: {rc.get_obsdict().keys()}")
-        # print(f"obs: {obs}")
         action, _ = model.predict(obs, deterministic=True) # obs shape is different
-        # hard-coding the myoHand to release object
-          # hard-coding the myoHand to release object
+        # myoHand control
         action[30] = 1
-        if step > 130:
+        obj_xpos = obs_dict['object_qpos'][0]
+        if obj_xpos > release_threshold and released_step == -1:
+            released_step = step
+
+        if step - released_step > waiting_step1:
             action[32:40] = 0
             action[40:49] = 1
 
-        #hard coding the MPL to the desire position, since we know the actuation of the MPL is the last 17 index of action
-        action[-17:] = np.array([-0.65001469 , 1.     ,    -0.23187843 , 0.59583695 , 0.92356688, -0.16,
-                                -0.28 ,      -0.88   ,     0.25 ,      -0.846   ,   -0.24981132 ,-0.91823529,
-                                -0.945  ,    -0.925   ,   -0.929   ,   -0.49    ,   -0.18      ])
-        if step > 250:
-            action[-17:] = np.array([-0.4199236 ,  1.      ,   -0.9840558 ,  0.35299219,  0.92356688,  0.02095238,
-                                        -0.28    ,   -0.88  ,      0.25      , -0.846     , -0.24981132, -0.91823529,
-                                        -0.945   ,   -0.925   ,   -0.929    ,  -0.49     ,  -0.918     ])
-        if step > 270:
-            action[-17:] = np.array([-0.4199236 ,  1.     ,    -0.9840558,   0.35299219 , 0.3910828 ,  0.02095238,
-                                        -0.28    ,   -0.88     ,   0.25   ,    -0.846     , -0.24981132 ,-0.91823529,
-                                        -0.945    ,  -0.925    ,  -0.929    ,  -0.49  ,     -0.918     ])
+        # MPL control
+        action[-17:] = np.array([-0.65001469, 1., -0.23187843, 0.59583695, 0.92356688, -0.16,
+                                -0.28, -0.88, 0.25, -0.846, -0.24981132, -0.91823529,
+                                -0.945, -0.925, -0.929, -0.49, -0.18])
+        if step - released_step > waiting_step2:
+            action[-17:] = np.array([-0.4199236, 1., -0.9840558, 0.35299219, 0.92356688, 0.02095238,
+                                    -0.28, -0.88, 0.25, -0.846, -0.24981132, -0.91823529,
+                                    -0.945, -0.925, -0.929, -0.49, -0.918])
+        if step - released_step > waiting_step3:
+            action[-17:] = np.array([-0.4199236, 1., -0.9840558, 0.35299219, 0.3910828, 0.02095238,
+                                    -0.28, -0.88, 0.25, -0.846, -0.24981132, -0.91823529,
+                                    -0.945, -0.925, -0.929, -0.49, -0.918])
         ################################################
 
         base = rc.act_on_environment(action)
