@@ -20,15 +20,25 @@ CUSTOM_RWD_KEYS_AND_WEIGHTS = {
     "fin_dis": 0.0,
     "obs_shift": 1.0 * 10.0,
     # "obs_ori_shift": 1.0 * 10.0,
-    "fin_open": 0.0,
-    "mpl_fin_open": 1.0, 
-    "lift_height": 0.0,
-    "pass_err": 0.0,
-    "lift_bonus": 0.0,
+    # "fin_open": 0.0,
+    # "mpl_fin_open": 1.0, 
+    # "lift_height": 0.0,
+    "pass_err": -1.0,
+    # "lift_bonus": 0.0,
+}
+
+DEFAULT_RWD_KEYS_AND_WEIGHTS = {
+    "reach_dist": -.1,
+    "act": 0,
+    "fin_dis": -0.5,
+    # "fin_open": -1,
+    # "lift_height": 2,
+    "pass_err": -1,
+    # "lift_bonus": 1,
 }
 
 class CustomBimanualEnv(BimanualEnvV1):
-
+    
     def __init__(self, model_path, obsd_model_path=None, seed=None, **kwargs):
         gym.utils.EzPickle.__init__(self, model_path, obsd_model_path, seed, **kwargs)
         BaseV0.__init__(self, model_path=model_path, obsd_model_path=obsd_model_path, seed=seed, env_credits=self.MYO_CREDIT)
@@ -52,7 +62,7 @@ class CustomBimanualEnv(BimanualEnvV1):
                # {'high': [1.2, 0.006, 0.00012], 'low': [0.8, 0.004, 0.00008]},  # friction change
                task_choice='fixed',  # fixed/ random
                obs_keys: list = BimanualEnvV1.DEFAULT_OBS_KEYS,
-               weighted_reward_keys: dict = BimanualEnvV1.DEFAULT_RWD_KEYS_AND_WEIGHTS, #DEFAULT_RWD_KEYS_AND_WEIGHTS,
+               weighted_reward_keys: dict = CUSTOM_RWD_KEYS_AND_WEIGHTS, #DEFAULT_RWD_KEYS_AND_WEIGHTS,
                start_pos=(-0.4, -0.25),
                goal_pos=(0.4, -0.25),
                **kwargs,
